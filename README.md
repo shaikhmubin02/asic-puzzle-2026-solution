@@ -1,5 +1,7 @@
 # Reverse-engineering the Jane Street ASIC puzzle
 
+By Mubin Shaikh · [blog post](https://mubin.page/ui/reverse-engineering-an-asic)
+
 **Answer: `(* TWO STARS *)`**
 
 The chip is an 11×11 Star Battle ("Two Not Touching") puzzle checker. Feed it the
