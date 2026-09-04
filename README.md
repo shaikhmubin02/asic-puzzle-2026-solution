@@ -1,10 +1,10 @@
 # Reverse-engineering the Jane Street ASIC puzzle
 
-By Mubin Shaikh · [blog post](https://mubin.page/ui/reverse-engineering-an-asic)
+By Mubin Shaikh - [blog post](https://mubin.page/ui/reverse-engineering-an-asic)
 
 **Answer: `(* TWO STARS *)`**
 
-The chip is an 11×11 Star Battle ("Two Not Touching") puzzle checker. Feed it the
+The chip is an 11x11 Star Battle ("Two Not Touching") puzzle checker. Feed it the
 unique solution as 121 serial bits and `success` goes high; the output generator then
 clocks that string out on `O[7:0]`.
 
@@ -20,7 +20,7 @@ Everything below is how I got there. All the tooling is in `tools/`.
 
 The repo gives you `puzzle.gds`, a labelled `layout.png`, an `example_inputs.vcd`
 with a deliberately wrong stimulus, and a warm-up directory containing a tiny
-`A + B == 496` design at every stage of the flow — Verilog source, synthesized
+`A + B == 496` design at every stage of the flow: Verilog source, synthesized
 netlist, DEF, and final GDS.
 
 That warm-up directory is the most useful thing in the repo, and not because the
@@ -43,25 +43,25 @@ sky130_fd_sc_hd__mux2_1
 ...
 ```
 
-The standard cells kept their names. Not just their names — dumping the labels
+The standard cells kept their names. Not just their names. Dumping the labels
 inside `sky130_fd_sc_hd__nand2_2` gives you `A`, `B`, `Y`, `VPWR`, `VGND` sitting on
 the li1 label layer (67/5), exactly where the pins are. The README says "many
 internal names removed", and what got removed was the top-level net names. The
 library is intact.
 
 That changes the problem completely. I don't have to identify gates from transistor
-geometry — I know what every cell is and where its pins are. All I have to do is
+geometry. I know what every cell is and where its pins are. All I have to do is
 figure out which pins are electrically connected. That's a connectivity extraction,
 which is tedious but completely mechanical.
 
 Two other things I checked before writing any real code, because both would have
 cost me hours later:
 
-- Every reference has magnification 1, rotation of only 0° or 180°, optional
+- Every reference has magnification 1, rotation of only 0 or 180 degrees, optional
   Y-mirror, and no array repetitions. So the transform math is four lines.
 - Every polygon in the top cell has exactly four vertices. All 1499 of them. The
   router emitted pure rectangles. Inside the standard cells there are L-shapes, but
-  the top level — which is where all the interesting routing lives — is rectangles
+  the top level, which is where all the interesting routing lives, is rectangles
   all the way down.
 
 ## Turning rectangles into nets
@@ -78,7 +78,8 @@ The extractor (`tools/extract2.py`) is about 120 lines and does this:
    rectangles into absolute nanometre coordinates.
 3. **Merge per layer.** Union-find over rectangles that touch or overlap on the same
    layer, using closed intervals so edge-abutting shapes count as connected. I
-   bucket everything into a 2 µm grid first so I'm not doing 92,000² comparisons.
+   bucket everything into a 2 um grid first, so I'm not doing 92,000 squared
+   comparisons.
 4. **Stitch the layers.** For each via shape, find the metal it overlaps on the
    layer below and above and union all of it together. The via layers in sky130 are
    mcon 67/44 (li1 to met1), via 68/44, via2 69/44, via3 70/44, via4 71/44.
@@ -90,8 +91,8 @@ The number I watched most closely was unconnected vias. A via that doesn't land 
 metal on both sides means my layer map is wrong, or my rectangle decomposition
 dropped something, or I'd fumbled a transform. It went from a few hundred to zero as
 I fixed things, and once it hit zero everything else fell into place: 92,001
-rectangles, 942 logic cells, 92 flip-flops, 741 signal nets, and — the other check I
-cared about — every single cell pin resolving to exactly one net. Zero pins on two
+rectangles, 942 logic cells, 92 flip-flops, 741 signal nets. And the other check I
+cared about: every single cell pin resolved to exactly one net. Zero pins on two
 nets means I never accidentally shorted anything together.
 
 For gate behaviour I didn't want to rely on remembering what `a21boi` does. SkyWater
@@ -104,7 +105,7 @@ buf  buf0  (X          , nand1_out_X    );
 ```
 
 So `tools/cellsdb.py` clones the PDK library and parses those into primitive gate
-lists — `and`, `or`, `nand`, `nor`, `xor`, `xnor`, `not`, `buf`, `udp_dff$P/$PR/$PS`,
+lists: `and`, `or`, `nand`, `nor`, `xor`, `xnor`, `not`, `buf`, `udp_dff$P/$PR/$PS`,
 `udp_mux_2to1`, `pullup`, `pulldown`. The semantics are the vendor's, not mine.
 
 Then the warm-up test. Extract `warmup/04_final.gds`, levelize the combinational
@@ -133,11 +134,11 @@ structure jumps out immediately:
  34 dffPR    114080  125120  387  [34, 44, ..., 73, 74, 75, 76] ['I','enable']
 ```
 
-Flops 44–48 depend only on themselves and `enable` — a counter. 73–76, same, but
-gated by 44–48 — a second counter that ticks when the first one wraps. Then a long
-list of flops that come in **pairs**: 12 depends on 12 and 20, 20 depends on 12 and
-20, and so on. And a set of flops with ~385-gate input cones that all reference the
-second counter.
+Flops 44-48 depend only on themselves and `enable`. That is a counter. 73-76 do
+the same, but gated by 44-48, a second counter that ticks when the first one
+wraps. Then a long list of flops that come in **pairs**: 12 depends on 12 and
+20, 20 depends on 12 and 20, and so on. And a set of flops with ~385-gate input
+cones that all reference the second counter.
 
 Expanding `success`'s driver into a boolean expression was the moment the shape of
 the thing became clear:
@@ -160,7 +161,7 @@ two-bit value. Two sticky flags that have to be clear. And eight flops that have
 hold one specific pattern.
 
 Simulating the counters told me `enable` is held high for exactly **121** cycles,
-and 121 = 11 × 11. Eleven pairs in one group, eleven in the other. At that point I
+and 121 = 11 x 11. Eleven pairs in one group, eleven in the other. At that point I
 was fairly confident it was a grid constraint puzzle with per-row and per-column
 counts, and I guessed N-queens.
 
@@ -174,14 +175,14 @@ came out of the output generator. `O[7:0]` clocked out:
 ```
 
 Which was a great feeling for two reasons. First, it's a full-loop confirmation that
-the extraction is right — nine bytes of clean English don't fall out of a netlist you
+the extraction is right: nine bytes of clean English don't fall out of a netlist you
 got wrong. Second, "EMPTY SKY" is a hint about the domain.
 
 I'd also noticed by then that the provided VCD spells `TRY AGAIN` on `O`, so the
 generator clearly has multiple messages in it.
 
-So I went back to the flop pairs. Probing the extracted netlist one cell at a time —
-place a single star at cell (r, c), see which pair's accumulator ticks — the second
+So I went back to the flop pairs. Probing the extracted netlist one cell at a time,
+placing a single star at cell (r, c) to see which pair's accumulator ticks, the second
 group turned out to depend only on the column, so those eleven pairs are column
 counters. And the required value works out to 2 rather than 1, which killed the
 N-queens theory. The confirmation arrived when I fed in a SAT solution and the chip
@@ -200,8 +201,8 @@ Jane Street.
 
 Once you know the game, every block has an obvious job.
 
-Two counters give you the coordinates. `ctrA` (bits Q47, Q48, Q45, Q46) counts 0–10
-and wraps: that's the column. `ctrB` (Q73–Q76) ticks on each wrap: that's the row.
+Two counters give you the coordinates. `ctrA` (bits Q47, Q48, Q45, Q46) counts 0-10
+and wraps: that's the column. `ctrB` (Q73-Q76) ticks on each wrap: that's the row.
 Q44 is a sticky "input phase done" that sets after the 121st bit. Neither counter
 depends on `I`, which matters later.
 
@@ -237,7 +238,7 @@ Q54' = ( ((a2|a0|~(a1&a3)) & Q58)          // up-right, suppressed at col 10
 
 The `ctrA` terms are just edge-of-row guards so column 0 doesn't wrap around to
 column 10 of the previous row. Checking only the four already-seen neighbours is
-enough by symmetry — every adjacent pair gets caught exactly once, when the later of
+enough by symmetry: every adjacent pair gets caught exactly once, when the later of
 the two arrives. That's "no two stars touch, even diagonally", in about a dozen
 gates plus a shift register.
 
@@ -250,7 +251,7 @@ last input bit, and then latches.
 
 ## Reading the puzzle off the silicon
 
-The region map isn't stored anywhere as data — it's baked into the decode logic for
+The region map isn't stored anywhere as data. It's baked into the decode logic for
 those eleven region accumulators. Rather than untangle 385 gates eleven times, I
 probed it: place exactly one star at each of the 121 cells in turn, and record which
 region accumulator moves. Eleven runs of 121 simulations, and out comes the map.
@@ -284,14 +285,14 @@ Here it is, with the solution marked:
 ```
 
 I checked that every region is orthogonally connected, which they are. The sizes are
-4, 5, 6, 7, 8, 8, 9, 11, 14, 21 and 28 — much more irregular than a typical
+4, 5, 6, 7, 8, 8, 9, 11, 14, 21 and 28, much more irregular than a typical
 hand-made Star Battle, but the puzzle is well formed and the solution is unique, so
 it does its job.
 
 ## Letting a SAT solver do the puzzle
 
 I never solved the Star Battle by hand. Once you have a gate-level netlist, you
-don't have to understand the puzzle to solve it — you just have to compile the
+don't have to understand the puzzle to solve it. You just have to compile the
 circuit into CNF and ask for an input that makes `success` true.
 
 The one thing that makes this cheap is that the counters don't depend on `I`. I
@@ -302,7 +303,7 @@ of the unrolled formula.
 
 After that it's a standard bounded unrolling. The `success` cone is 68 flops and 897
 gates per cycle; unroll 121 cycles with Tseitin encoding, initialize all the flops to
-zero (they're all `dffPR`, so reset clears them — the only reset-less flops on the
+zero (they're all `dffPR`, so reset clears them; the only reset-less flops on the
 die are in the output generator), tie `enable` and `rst_n` high, leave `I` free, and
 assert the final check. That's 110k variables and 297k clauses.
 
@@ -326,7 +327,7 @@ counter being 0 and being 121:
 | otherwise | `TRY AGAIN` |
 
 The three easter-egg branches are plain ROM. The winning branch is ROM **XOR** the
-eight-bit state register — and that register spends the whole input phase absorbing
+eight-bit state register, and that register spends the whole input phase absorbing
 `I`. So it's a tiny keystream derived from your input.
 
 I tested this by holding the input fixed and scrambling those eight flops, and got:
@@ -336,25 +337,26 @@ I tested this by holding the input fixed and scrambling those eight flops, and g
 ```
 
 Which is the point. You cannot force `success` high, or patch the netlist, or guess
-at the string — if the 121 bits you shifted in aren't exactly right, the keystream is
+at the string. If the 121 bits you shifted in aren't exactly right, the keystream is
 wrong and the answer decodes to noise. The only way to read `(* TWO STARS *)` off the
 chip is to actually solve the puzzle. That's a genuinely elegant piece of puzzle
 design, and I appreciated it more the longer I looked at it.
 
 ## Easter eggs
 
-Six, plus the answer string itself:
+Six of them:
 
-- **`EMPTY SKY`** — feed an all-zero grid.
-- **`BIG BANG`** — feed an all-ones grid, all 121 cells.
-- **`TRY AGAIN`** — anything else that isn't a solution.
-- **`The night sky awaits`** — hidden in `example_inputs.vcd`. Its 242 stimulus bits
+- **`EMPTY SKY`**: feed an all-zero grid.
+- **`BIG BANG`**: feed an all-ones grid, all 121 cells. These two, plus the default
+  `TRY AGAIN` and the winning message, are the four branches of the output mux,
+  selected by the total-star counter and the success flag.
+- **`The night sky awaits`**: hidden in `example_inputs.vcd`. Its 242 stimulus bits
   are two 121-bit attempts. Take each grid row's first seven bits as an LSB-first
   7-bit ASCII character, and the 22 rows spell it out. It's also why columns 7
   through 10 are conspicuously empty in that stimulus, which is what made me look.
 - The VCD's `$version` field: *"Leave no stone unturned! But for this file, consider
   looking at it in a waveform viewer instead."*
-- The VCD's `$date` field: `Sat Dec 31 23:59:60 2016` — second 60, which was a real
+- The VCD's `$date` field: `Sat Dec 31 23:59:60 2016`, second 60, which was a real
   leap second.
 - `(* TWO STARS *)` is an OCaml comment.
 
@@ -365,7 +367,7 @@ place-and-route boundary and some filler cells whose names were stripped to
 
 ## Tools
 
-No commercial EDA, no Magic or KLayout extraction — just `gdstk` for parsing,
+No commercial EDA, no Magic or KLayout extraction: just `gdstk` for parsing,
 `python-sat` (CaDiCaL 1.5.3) for the solve, and the SkyWater functional Verilog for
 cell semantics.
 
@@ -382,6 +384,9 @@ cell semantics.
 | `tools/modes.py`, `tools/modes2.py` | enumerates the output generator's four messages |
 | `tools/final_verify.py` | end-to-end replay straight from `puzzle.gds` |
 | `tools/emit_results.py` | writes `results/` out as plain text |
+| `tools/blocks.py` | assigns every cell to a functional block, for the floorplan figure |
+| `tools/wavedata.py` | captures the signal trace around the input/output boundary |
+| `tools/figures.py` | draws the figures in `figures/` as SVG |
 
 ## What is not in this repo
 
@@ -427,9 +432,13 @@ Everything in `results/` is plain text, generated by the pipeline above.
 | `results/region_map.txt` | region membership per cell, plus region sizes |
 | `results/results.json` | all of the above, machine readable |
 
+`figures/` holds the diagrams used in the blog post: the recovered grid solved and
+unsolved, the die with each recovered functional block highlighted, and a waveform
+of the replay.
+
 ## Closing thought
 
-The thing I'd tell anyone attempting this next year is: spend your first hour on the
+The thing I'd tell anyone attempting something like this is: spend your first hour on the
 warm-up, not the puzzle. Extraction is the kind of task where being 99% right feels
 identical to being 100% right until suddenly it doesn't, and the warm-up is the only
 place you can tell the difference. Every hour I spent making `A + B == 496` come back
