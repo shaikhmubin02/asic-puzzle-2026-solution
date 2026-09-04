@@ -1,0 +1,9 @@
+# upstream inputs, cloned rather than redistributed
+asic-puzzle-2026/
+sky130hd/
+
+# derived artifacts
+*.pkl
+cellsdb.json
+__pycache__/
+*.pyc

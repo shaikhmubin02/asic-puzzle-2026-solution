@@ -1,0 +1,26 @@
+Region membership per cell, recovered by single-star probing.
+
+  G G G G G C C D E E B
+  G G I G G C D D E E B
+  G G I C C C C D D E B
+  G G I C H H H B D D B
+  I G I C H B B B B B B
+  I I I C H H H B K K K
+  C C C C C C H B K A A
+  C F F F H H H B K A A
+  C F F J B B B B K A A
+  C C F J J B B B K K K
+  C F F J B B B B B B B
+
+Region sizes:
+  A: 6 cells
+  B: 28 cells
+  C: 21 cells
+  D: 7 cells
+  E: 5 cells
+  F: 8 cells
+  G: 14 cells
+  H: 11 cells
+  I: 8 cells
+  J: 4 cells
+  K: 9 cells
